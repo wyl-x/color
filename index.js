@@ -30,3 +30,9 @@ function getDarkColor(color, level) {
   }
   return rgbToHex(rgb)
 }
+
+function genRandomColor() {
+  const rgb = [0, 0, 0].map(item => ~~(Math.random() * 256))
+  console.log(rgb)
+  return rgbToHex(rgb)
+}
