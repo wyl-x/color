@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document</title>
+  <script src="lib/vue.min.js"></script>
+  <script src="./index.js"></script>
+  <style>
+      #app {
+          width: 500px;
+          margin: 0 auto;
+          box-sizing: border-box;
+      }
+
+      input {
+          width: 500px;
+          font-size: 20px;
+          padding: 10px;
+      }
+
+      .list-item {
+          display: flex;
+          align-items: center;
+          margin-bottom: 1px;
+      }
+
+      .color-item {
+          width: 120px;
+          height: 22px;
+          margin-right: 10px;
+      }
+
+      .flex {
+          display: flex;
+          justify-content: space-between;
+      }
+
+      .list-wrap {
+          width: 240px;
+      }
+  </style>
+</head>
+<body>
+<div id="app">
+  <input v-model="color" type="text"/>
+
+  <div class="flex">
+    <div class="list-wrap">
+      <h2>light</h2>
+      <div
+        class="list-item"
+        v-for="item in list"
+        :key="item.color"
+      >
+        <div class="color-item" :style="{backgroundColor: item.color}"></div>
+        <div class="color-value">{{item.percent}} {{item.color}}</div>
+      </div>
+    </div>
+
+    <div class="list-wrap">
+      <h2>dark</h2>
+      <div
+        class="list-item"
+        v-for="item in list2"
+        :key="item.color"
+      >
+        <div class="color-item" :style="{backgroundColor: item.color}"></div>
+        <div class="color-value">{{item.percent}} {{item.color}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  vm = new Vue({
+    el: "#app",
+
+    data() {
+      return {
+        color: "#409EFF",
+      };
+    },
+
+    computed: {
+      list() {
+        const result = [];
+        for (let i = 0.01; i <= 1; i += 0.01) {
+          result.push(
+            {
+              color: getLightColor(this.color, i),
+              percent: i.toFixed(2),
+            }
+          );
+        }
+        return result;
+      },
+      list2() {
+        const result = [];
+        for (let i = 0.01; i <= 1; i += 0.01) {
+          result.push(
+            {
+              color: getDarkColor(this.color, i),
+              percent: i.toFixed(2),
+            }
+          );
+        }
+        return result;
+      },
+    },
+  });
+</script>
+</body>
+</html>
