@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记账本</title>
+    <script src="./lib/vue.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f5f5; font-family: Arial, sans-serif; }
+        #app { max-width: 600px; margin: 0 auto; padding: 15px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn { 
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            flex: 1;
+        }
+        .btn-income { background-color: #4CAF50; }
+        .btn-expense { background-color: #f44336; }
+        .record-form {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .form-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .form-item label {
+            width: 80px;
+        }
+        .form-item input, .form-item select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .records {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .total {
+            text-align: right;
+            padding: 15px;
+            font-weight: bold;
+        }
+        .export-btn {
+            background: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        .record-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-edit, .btn-delete {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-edit {
+            background-color: #2196F3;
+        }
+        .btn-delete {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>记账本</h1>
+        </div>
+        <button class="export-btn" @click="exportToExcel">导出到Excel</button>
+        <div class="btn-group">
+            <button class="btn btn-income" @click="showForm('income')">新增收入</button>
+            <button class="btn btn-expense" @click="showForm('expense')">新增支出</button>
+        </div>
+        
+        <div class="record-form" v-if="isFormVisible">
+            <div class="form-item">
+                <label>类型：</label>
+                <select v-model="currentRecord.type">
+                    <option value="income">收入</option>
+                    <option value="expense">支出</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label>日期：</label>
+                <input type="date" v-model="currentRecord.date">
+            </div>
+            <div class="form-item">
+                <label>金额：</label>
+                <input type="number" v-model="currentRecord.amount">
+            </div>
+            <div class="form-item">
+                <label>备注：</label>
+                <input type="text" v-model="currentRecord.note">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-income" @click="saveRecord">保存</button>
+                <button class="btn btn-expense" @click="isFormVisible = false">取消</button>
+            </div>
+        </div>
+
+        <div class="records">
+            <div class="record-item" v-for="(record, index) in records" :key="index">
+                <div>
+                    <div>{{record.date}}</div>
+                    <div>{{record.note}}</div>
+                </div>
+                <div class="record-actions">
+                    <div :style="{color: record.type === 'income' ? '#4CAF50' : '#f44336'}">
+                        {{record.type === 'income' ? '+' : '-'}}{{record.amount}}
+                    </div>
+                    <button class="btn-edit" @click="editRecord(index)">编辑</button>
+                    <button class="btn-delete" @click="deleteRecord(index)">删除</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="total">
+            总计: {{total}}
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                records: [],
+                isFormVisible: false,
+                editIndex: undefined,
+                currentRecord: {
+                    type: 'income',
+                    date: '',
+                    amount: '',
+                    note: ''
+                }
+            },
+            created() {
+                const savedRecords = localStorage.getItem('accountRecords')
+                if (savedRecords) {
+                    this.records = JSON.parse(savedRecords)
+                }
+            },
+            computed: {
+                total() {
+                    return this.records.reduce((sum, record) => {
+                        return sum + (record.type === 'income' ? 1 : -1) * Number(record.amount)
+                    }, 0)
+                }
+            },
+            methods: {
+                showForm(type) {
+                    this.isFormVisible = true
+                    this.currentRecord = {
+                        type: type,
+                        date: new Date().toISOString().split('T')[0],
+                        amount: '',
+                        note: ''
+                    }
+                },
+                editRecord(index) {
+                    this.currentRecord = { ...this.records[index] }
+                    this.editIndex = index
+                    this.isFormVisible = true
+                },
+                deleteRecord(index) {
+                    this.records.splice(index, 1)
+                    localStorage.setItem('accountRecords', JSON.stringify(this.records))
+                },
+                saveRecord() {
+                    if (!this.currentRecord.date || !this.currentRecord.amount) {
+                        alert('请填写日期和金额！')
+                        return
+                    }
+                    
+                    if (this.editIndex !== undefined) {
+                        this.records.splice(this.editIndex, 1, { ...this.currentRecord })
+                        this.editIndex = undefined
+                    } else {
+                        this.records.push({ ...this.currentRecord })
+                    }
+                    
+                    localStorage.setItem('accountRecords', JSON.stringify(this.records))
+                    this.isFormVisible = false
+                },
+                exportToExcel() {
+                    const exportData = this.records.map(record => ({
+                        '日期': record.date,
+                        '类型': record.type === 'income' ? '收入' : '支出',
+                        '金额': record.amount,
+                        '备注': record.note
+                    }));
+                    
+                    exportData.push({
+                        '日期': '合计',
+                        '类型': '',
+                        '金额': this.total,
+                        '备注': ''
+                    });
+                    
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.json_to_sheet(exportData);
+                    
+                    const colWidth = [
+                        { wch: 12 },
+                        { wch: 8 },
+                        { wch: 10 },
+                        { wch: 20 }
+                    ];
+                    ws['!cols'] = colWidth;
+                    
+                    XLSX.utils.book_append_sheet(wb, ws, "记账记录");
+                    XLSX.writeFile(wb, `记账本_${new Date().toLocaleDateString()}.xlsx`);
+                }
+            }
+        })
+    </script>
+</body>
+</html>
